@@ -1,118 +1,50 @@
-import connUtil from "../helpers/connectionUtil.js";
+import { ObjectId } from "mongodb";
+import db from "../database/conn.mjs";
 
 const controller = {};
 
-const queries = {
-  find: `
-    SELECT
-      us.id,
-      us.fullName,
-      us.username,
-      us.roleId,
-      rol.\`name\` AS roleName,
-      us.locationId,
-      loc.\`name\` AS locationName,
-      us.isActive,
-      us.cashierId,
-      us.isAdmin,
-      us.canCloseCashier
-    FROM
-      users us
-      JOIN roles rol 
-        ON us.roleId = rol.id
-      JOIN locations loc 
-        ON us.locationId = loc.id
-    WHERE
-      us.isActive = 1
-    ORDER BY
-      us.fullName;
-  `,
-  findById: `
-    SELECT
-      us.id,
-      us.fullName,
-      us.username,
-      us.roleId,
-      rol.\`name\` AS roleName,
-      us.locationId,
-      loc.\`name\` AS locationName,
-      us.isActive,
-      us.cashierId,
-      us.isAdmin,
-      us.canCloseCashier
-    FROM
-      users us
-      JOIN roles rol 
-        ON us.roleId = rol.id
-      JOIN locations loc 
-        ON us.locationId = loc.id
-    WHERE
-      us.id = ?
-    ORDER BY
-      us.fullName;
-  `,
-  add: `
-    INSERT INTO users 
-      (fullName, username, \`password\`, PINCode, roleId, locationId, cashierId, isAdmin, canCloseCashier)
-    VALUES 
-      (?, ?, SHA2(?, 512), ?, ?, ?, ?, ?, ?);  
-  `,
-  update: `
-    UPDATE
-      users
-    SET
-      fullName = IFNULL(?, fullName),
-      username = IFNULL(?, username),
-      roleId = IFNULL(?, roleId),
-      locationId = IFNULL(?, locationId),
-      cashierId = IFNULL(?, cashierId),
-      isAdmin = IFNULL(?, isAdmin),
-      canCloseCashier = IFNULL(?, canCloseCashier)
-    WHERE
-      id = ?;
-  `,
-  remove: `
-    UPDATE 
-      users
-    SET
-      isActive = 0
-    WHERE
-      id = ?;
-  `
-}
+controller.find = async (req, res) => {
+  let collection = db.collection("users");
+  let results = await collection.find().toArray();
 
-controller.find = (req, res) => {
-  req.getConnection(connUtil.connFunc(queries.find, [], res));
+  if (!results) res.status(400).json({ info: "No se pudieron obtener los usuarios" });
+  else {
+    res.json(results);
+  }
 }
 
 controller.findById = (req, res) => {
-  const { userId } = req.body;
-  req.getConnection(connUtil.connFunc(queries.findById, [ userId ], res));
+  
 }
 
-controller.add = (req, res) => {
-  const {
-    fullName,
-    username,
-    password,
-    PINCode,
-    roleId,
-    locationId,
-    cashierId,
-    isAdmin,
-    canCloseCashier
-  } = req.body;
-  req.getConnection(connUtil.connFunc(queries.add, [ fullName, username, password, PINCode, roleId, locationId, cashierId, isAdmin, canCloseCashier ], res));
+controller.add = async (req, res) => {
+  const { idtoauth } = req.headers;
+  let newDoc = req.body;
+  newDoc.createdAt = new Date();
+  newDoc.updatedAt = new Date();
+  newDoc.createdBy = new ObjectId(idtoauth);
+  let collection = db.collection("users");
+  let result = await collection.insertOne(newDoc);
+  res.send(result).status(204);
 }
 
-controller.update = (req, res) => {
+controller.update = async (req, res) => {
+  const { idtoauth } = req.headers;
   const { fullName, username, roleId, locationId, cashierId, isAdmin, canCloseCashier, userId } = req.body;
-  req.getConnection(connUtil.connFunc(queries.update, [ fullName, username, roleId, locationId, cashierId, isAdmin, canCloseCashier, userId || 0 ], res));
+  const query = { _id: new ObjectId(userId) };
+  const updates = {
+    $set: { fullName, username, roleId, locationId, cashierId, isAdmin, canCloseCashier, updatedAt: new Date(), updatedBy: new ObjectId(idtoauth) }
+  };
+  let collection = db.collection("users");
+  let result = await collection.updateOne(query, updates);
+  res.send(result).status(200);
 }
 
-controller.remove = (req, res) => {
-  const { userId } = req.params;
-  req.getConnection(connUtil.connFunc(queries.remove, [ userId || 0 ], res));
+controller.remove = async (req, res) => {
+  const query = { _id: new ObjectId(req.params.userId) };
+  const collection = db.collection("users");
+  let result = await collection.deleteOne(query);
+  res.send(result).status(200);
 }
 
 export default controller;

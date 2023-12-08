@@ -21,6 +21,7 @@
     "express-myconnection": "^1.0.4",
     "ip": "^1.1.5",
     "jsonwebtoken": "^8.5.1",
+    "mongodb": "^6.3.0",
     "morgan": "^1.10.0",
     "mysql2": "^2.3.3",
     "nodemailer": "^6.9.5",

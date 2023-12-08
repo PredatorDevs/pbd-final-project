@@ -1,9 +1,9 @@
 import jsonwebtoken from 'jsonwebtoken';
+import db from '../database/conn.mjs';
+import { ObjectId } from 'mongodb';
 const { verify } = jsonwebtoken;
 
 const middleware = {};
-
-const checkIfUserIsActiveQuery = `SELECT IFNULL((SELECT isActive FROM users WHERE id = ?), 0) AS isActive;`;
 
 middleware.checkToken = (req, res, next) => {
   const { authorization } = req.headers;
@@ -13,25 +13,17 @@ middleware.checkToken = (req, res, next) => {
   })
 }
 
-middleware.checkUserIsActive = (req, res, next) => {
-  req.getConnection((err, conn) => {
-    if (err) res.status(400).json(err);
-    else {
-      const { idtoauth } = req.headers;
-      conn.query(
-        checkIfUserIsActiveQuery,
-        [ idtoauth ],
-        (err, rows) => {
-          if (err) res.status(400).json(err);
-          else {
-            console.log(rows);
-            if (rows[0].isActive === 1) next();
-            else res.status(400).json({ status: 400, message: 'Current users cant be authorized because block or ban' });
-          }
-        }
-      )
-    }
-  })
+middleware.checkUserIsActive = async (req, res, next) => {
+  const { idtoauth } = req.headers;
+
+  let collection = db.collection("users");
+  let result = await collection.findOne({ _id: new ObjectId(idtoauth) });
+
+  if (!result) res.status(400).json({ error: "User verification failed" });
+  else {
+    if (result.isActive === 1) next();
+    else res.status(400).json({ status: 400, message: 'Current users cant be authorized because block or ban' });
+  }
 }
 
 export default middleware;

@@ -1,5 +1,6 @@
 import pkg from 'jsonwebtoken';
 import connUtil from '../helpers/connectionUtil.js';
+import db from '../database/conn.mjs';
 const { sign } = pkg;
 
 const controller = {};
@@ -10,28 +11,22 @@ const queries = {
   authUserPINCode: `CALL usp_AuthUserPINCode(?);`
 };
 
-controller.authLogin = (req, res) => {
-  req.getConnection((err, conn) => {
-    if (err) res.status(500).json({ info: err });
-    else {
-      const { username, password } = req.body;
-      conn.query(
-        queries.authLogin,
-        [ username, password ], 
-        (err, rows) => {
-          if (err) res.status(400).json({ info: err });
-          else {
-            const token = sign(
-              { 
-                payload: rows[0][0]}, 
-                process.env.PDEV_JWTSECRET,
-                { expiresIn: '24h' } // CONFIG OBJECT
-              );
-            res.json({ userdata: rows[0][0], token: token });
-          }
-      })
-    }
-  })
+controller.authLogin = async (req, res) => {
+  const { username, password } = req.body;
+
+  let collection = db.collection("users");
+  let results = await collection.findOne({ username, password });
+
+  if (!results) res.status(400).json({ info: "No has podido logearte" });
+  else {
+    const token = sign(
+      { payload: results }, 
+      process.env.PDEV_JWTSECRET,
+      { expiresIn: '24h' } // CONFIG OBJECT
+    );
+    
+    res.json({ userdata: results, token: token });
+  }
 }
 
 controller.authUserPassword = (req, res) => {
@@ -47,6 +42,36 @@ controller.authUserPINCode = (req, res) => {
 
 controller.successVerification = (req, res) => {
   res.json({ status: 200, message: 'Success' });
+}
+
+controller.testingmongo = async (req, res) => {
+  let collection = db.collection("users");
+  let results = await collection.find({})
+    .limit(50)
+    .toArray();
+  res.send(results).status(200);
+}
+
+controller.testingmongopost = async (req, res) => {
+  let collection = db.collection("posts");
+  let newDocument = {
+    "id" : 1,
+    "fullName" : "Gustavo Sánchez",
+    "username" : "predator",
+    "password" : "8f4dde1f054b22564ba30aff55ccf8a7b4a00e8681e09bab28b902f5f3cd856fa23d8c4f4cdea5bd2d7e0b68c0f487106cdeddba55d5ae3013aca46def3483ec",
+    "PINCode" : "28351",
+    "isActive" : 1,
+    "roleId" : 1,
+    "locationId" : 1,
+    "isAdmin" : 1,
+    "createdAt" : "2023-03-19 16:09:24",
+    "updatedAt" : "2023-03-19 16:09:24",
+    "cashierId" : 5,
+    "canCloseCashier" : 1
+  };
+  newDocument.date = new Date();
+  let result = await collection.insertOne(newDocument);
+  res.send(result).status(204);
 }
 
 export default controller;

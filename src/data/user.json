@@ -1,0 +1,15 @@
+{
+  "id" : 1,
+  "fullName" : "Gustavo Sánchez",
+  "username" : "predator",
+  "password" : "8f4dde1f054b22564ba30aff55ccf8a7b4a00e8681e09bab28b902f5f3cd856fa23d8c4f4cdea5bd2d7e0b68c0f487106cdeddba55d5ae3013aca46def3483ec",
+  "PINCode" : "28351",
+  "isActive" : 1,
+  "roleId" : 1,
+  "locationId" : 1,
+  "isAdmin" : 1,
+  "createdAt" : "2023-03-19 16:09:24",
+  "updatedAt" : "2023-03-19 16:09:24",
+  "cashierId" : 5,
+  "canCloseCashier" : 1
+}
